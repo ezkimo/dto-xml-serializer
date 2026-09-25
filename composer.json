@@ -1,0 +1,40 @@
+{
+    "name": "mmnewmedia/dto-xml-serializer",
+    "description": "DTO <-> XML/JSON serializer driven by XSD-like PHP attribute classes",
+    "keywords": ["dto", "xml", "json", "serializer", "xsd", "php-attributes", "en16931"],
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Marcel Maaß",
+            "email": "info@mm-newmedia.de"
+        }
+    ],
+    "require": {
+        "php": "^8.4|^8.5",
+        "ext-dom": "*",
+        "ext-json": "*",
+        "laminas/laminas-serializer": "^4.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^13.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "MMNewmedia\\Data\\": "src/Data/",
+            "MMNewmedia\\Model\\": "src/Model/",
+            "MMNewmedia\\Serializer\\": "src/Serializer/",
+            "MMNewmedia\\Xsd\\": "src/Xsd/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "MMNewmedia\\Tests\\": "tests/"
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "config": {
+        "sort-packages": true
+    }
+}
