@@ -22,7 +22,6 @@ use Override;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionProperty;
-use Reflector;
 use RuntimeException;
 use SplObjectStorage;
 
@@ -102,7 +101,7 @@ class XmlDtoSerializer implements AdapterInterface
         return $dom->saveXML();
     }
 
-    protected function xmlToDto(string $xml)
+    protected function xmlToDto(string $xml): string
     {
         return '';
     }
@@ -147,9 +146,9 @@ class XmlDtoSerializer implements AdapterInterface
     /**
      * Liefert den Namen eines Elements aus dem Element-Attribut zu ermitteln. Liefert das Attribut
      * keinen Namen, wird der Name der ReflectionProperty Instanz genommen.
-     * 
+     *
      * @param ReflectionProperty $element
-     * @param ReflectionAttribute $attribute
+     * @param ReflectionAttribute<Element> $attribute
      * @return string
      */
     protected function getElementName(ReflectionProperty $element, ReflectionAttribute $attribute): string
@@ -169,23 +168,18 @@ class XmlDtoSerializer implements AdapterInterface
     }
 
     /**
-     * Liefert den Namespace des übergebenen Elements
-     * 
-     * @param Reflector $element
-     * @param ReflectionAttribute $attribute
+     * Liefert den Namespace des übergebenen Elements.
+     *
+     * @param ReflectionClass|ReflectionProperty $element
+     * @param ReflectionAttribute<Element> $attribute
      * @return null|string
      */
-    protected function getElementNamespace(Reflector $element, ReflectionAttribute $attribute): ?string
+    protected function getElementNamespace(ReflectionClass|ReflectionProperty $element, ReflectionAttribute $attribute): ?string
     {
-        $namespace = null;
-        $element = $attribute->newInstance();
+        $namespace = $attribute->newInstance()->namespace;
 
-        if ($element->namespace instanceof BackedEnum) {
-            $namespace = $element->namespace->value;
-        }
-
-        if (is_string($element->namespace)) {
-            $namespace = $element->namespace;
+        if ($namespace instanceof BackedEnum) {
+            return (string) $namespace->value;
         }
 
         return $namespace;
@@ -199,8 +193,8 @@ class XmlDtoSerializer implements AdapterInterface
      * Klasse verwendet (Standard-Verhalten des CII Modells).
      *
      * @param ReflectionProperty $property
-     * @param ReflectionAttribute $elementAttribute
-     * @param ReflectionAttribute|false $schema
+     * @param ReflectionAttribute<Element> $elementAttribute
+     * @param ReflectionAttribute<Schema>|false $schema
      * @return null|string
      */
     protected function resolveElementNamespace(
@@ -304,13 +298,13 @@ class XmlDtoSerializer implements AdapterInterface
     /**
      * Liefert den Namen der Elternklasse bei vererbten Klassen
      * Es wird der komplette Vererbungsbaum durchlaufen, bis die Root Klasse gefunden wurde.
-     * 
+     *
      * @param string $className
      * @return string
      */
     protected function getRootClass(string $className): string
     {
-        $root = null;
+        $root = $className;
         $reflector = new ReflectionClass($className);
         while ($reflector = $reflector->getParentClass()) {
             $root = $reflector->getName();
@@ -322,11 +316,11 @@ class XmlDtoSerializer implements AdapterInterface
     /**
      * Liefert die Target Namespace Eigenschaft des übergebenen Elements
      * Besitzt das übergenene Element kein Schema Attribut, wird false als Ergebnis geliefert.
-     * 
+     *
      * @param object $element
-     * @return false|Schema
+     * @return ReflectionAttribute<Schema>|false
      */
-    protected function getSchema(object $element)
+    protected function getSchema(object $element): ReflectionAttribute|false
     {
         $reflector = new ReflectionClass($element);
         $schema = $reflector->getAttributes(Schema::class)[0] ?? false;

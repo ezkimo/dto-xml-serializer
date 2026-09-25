@@ -14,6 +14,7 @@ final class XmlDtoSerializerTest extends TestCase
 {
     private XmlDtoSerializer $serializer;
 
+    #[\Override]
     protected function setUp(): void
     {
         $this->serializer = new XmlDtoSerializer();
@@ -64,7 +65,12 @@ final class XmlDtoSerializerTest extends TestCase
         $xml = $this->serializer->serialize(JsonDtoSerializerTest::invoice());
 
         $positions = array_map(
-            fn(string $needle): int => strpos($xml, $needle),
+            /**
+             * @return false|int
+             *
+             * @psalm-return false|int<0, max>
+             */
+            fn(string $needle): int|false => strpos($xml, $needle),
             ['<inv:ID', '<inv:IssueDate', '<inv:CopyIndicator', '<inv:PayableAmount', '<inv:InvoiceTypeCode', '<inv:BuyerParty', '<inv:Note', '<inv:AdditionalParty']
         );
 

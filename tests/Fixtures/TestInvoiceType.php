@@ -34,9 +34,15 @@ final readonly class TestInvoiceType
         #[Xsd\Element(namespace: Namespaces::CAC, name: 'BuyerParty', type: PartyType::class)]
         #[Xsd\Sequence(position: 6)]
         public PartyType $buyerParty,
+        /**
+         * @var SplObjectStorage<NoteType, mixed>
+         */
         #[Xsd\Element(namespace: Namespaces::CBC, name: 'Note', maxOccurs: 99, type: NoteType::class)]
         #[Xsd\Sequence(position: 7)]
         public SplObjectStorage $note,
+        /**
+         * @var SplObjectStorage<PartyType, mixed>
+         */
         #[Xsd\Element(namespace: Namespaces::CAC, name: 'AdditionalParty', maxOccurs: 99, type: PartyType::class)]
         #[Xsd\Sequence(position: 8)]
         public SplObjectStorage $additionalParty,

@@ -17,7 +17,8 @@
         "laminas/laminas-serializer": "^4.0"
     },
     "require-dev": {
-        "phpunit/phpunit": "^13.0"
+        "phpunit/phpunit": "^13.0",
+        "vimeo/psalm": "^6.5"
     },
     "autoload": {
         "psr-4": {
@@ -31,6 +32,10 @@
         "psr-4": {
             "MMNewmedia\\Tests\\": "tests/"
         }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "psalm": "psalm"
     },
     "minimum-stability": "dev",
     "prefer-stable": true,

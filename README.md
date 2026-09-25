@@ -136,8 +136,19 @@ enum HeaderNamespaces: string
 
 ```bash
 composer install
-vendor/bin/phpunit
+composer test
 ```
+
+## Static analysis
+
+```bash
+composer psalm
+```
+
+Psalm runs with `errorLevel="5"` (mirroring the original project configuration). Note that Psalm treats
+`ReflectionAttribute<T>` as invariant, so helpers that accept attributes read from specific
+`#[Element]` / `#[Schema]` / `#[Sequence]` attributes are annotated with the exact generic, e.g.
+`@param ReflectionAttribute<Element>`.
 
 ## License
 

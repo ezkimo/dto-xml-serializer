@@ -10,8 +10,6 @@ use DateTimeImmutable;
 use DateTimeInterface;
 use JsonException;
 use Laminas\Serializer\Adapter\AdapterInterface;
-use MMNewmedia\Model\CrossIndustryInvoice\CrossIndustryInvoiceType;
-use MMNewmedia\Model\UniversalBusinessLanguage\Invoice\InvoiceType;
 use MMNewmedia\Model\ValueableInterface;
 use MMNewmedia\Xsd\Attribute;
 use MMNewmedia\Xsd\Element;
@@ -22,7 +20,6 @@ use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionNamedType;
 use ReflectionProperty;
-use Reflector;
 use RuntimeException;
 use SplObjectStorage;
 
@@ -39,12 +36,14 @@ class JsonDtoSerializer implements AdapterInterface
     /**
      * Zuordnung des JSON Wurzelelementnamens zu der fqcn des DTOs.
      *
-     * @var array<string, string>
+     * @var array<string, class-string>
      */
-    protected array $rootClasses = [
-        'Invoice' => InvoiceType::class,
-        'CrossIndustryInvoice' => CrossIndustryInvoiceType::class,
-    ];
+    protected array $rootClasses = [];
+
+    public function __construct(array $rootClasses = [])
+    {
+        $this->rootClasses = $rootClasses;
+    }
 
     #[Override]
     public function serialize(mixed $value): string
@@ -138,7 +137,7 @@ class JsonDtoSerializer implements AdapterInterface
     /**
      * Liefert das erste Vorkommen des übergebenen Attributs an der übergebenen Stelle.
      */
-    protected function getAttribute(Reflector $reflector, string $attribute): ?ReflectionAttribute
+    protected function getAttribute(ReflectionClass|ReflectionProperty $reflector, string $attribute): ?ReflectionAttribute
     {
         $attributes = $reflector->getAttributes($attribute);
 

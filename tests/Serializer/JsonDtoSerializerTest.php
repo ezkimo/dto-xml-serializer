@@ -22,6 +22,7 @@ final class JsonDtoSerializerTest extends TestCase
 {
     private JsonDtoSerializer $serializer;
 
+    #[\Override]
     protected function setUp(): void
     {
         $this->serializer = new JsonDtoSerializer();
@@ -121,11 +122,13 @@ final class JsonDtoSerializerTest extends TestCase
         $buyerRole->setValue('Buyer');
         $buyer = new PartyType(self::text(new NameType(), 'Acme GmbH'), $buyerRole);
 
+        /** @var SplObjectStorage<NoteType, mixed> $notes */
         $notes = new SplObjectStorage();
         foreach (['first note', 'second note'] as $text) {
             $notes->offsetSet(self::text(new NoteType(), $text));
         }
 
+        /** @var SplObjectStorage<PartyType, mixed> $additionalParties */
         $additionalParties = new SplObjectStorage();
         foreach ([['Agent GmbH', '407', 'Agent'], ['Sub GmbH', '408', 'Sub']] as [$name, $listId, $role]) {
             $roleType = new CodeType($listId);

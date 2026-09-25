@@ -6,14 +6,17 @@ namespace MMNewmedia\Data;
 
 use MMNewmedia\Xsd\Sequence;
 use ReflectionAttribute;
+use ReflectionProperty;
 use SplMinHeap;
 
 /**
  * SPL Min Heap Implementierung zur Darstellung der richtigen Reihenfolge von Elementen
  * Die Reihenfolge wird durch XSD Sequence Blöcke vorgegeben
- * 
+ *
  * @author Marcel Maaß <marcel@mm-newmedia.de>
  * @since 2025-01-03
+ *
+ * @extends SplMinHeap<ReflectionProperty>
  */
 
 class SequenceHeap extends SplMinHeap
@@ -22,12 +25,13 @@ class SequenceHeap extends SplMinHeap
      * {@inheritDoc}
      * @see SplMinHead::compare()
      */
-    protected function compare(mixed $elementA, mixed $elementB): int
+    #[\Override]
+    protected function compare(mixed $value1, mixed $value2): int
     {
-        $attributes = $elementA->getAttributes(Sequence::class);
+        $attributes = $value1->getAttributes(Sequence::class);
         $sequenceA = reset($attributes);
 
-        $attributes = $elementB->getAttributes(Sequence::class);
+        $attributes = $value2->getAttributes(Sequence::class);
         $sequenceB = reset($attributes);
 
         $valueA = $this->getCurrentPosition($sequenceA);
@@ -42,8 +46,8 @@ class SequenceHeap extends SplMinHeap
 
     /**
      * Liefert den Wert des position Arguments des übergebenen Sequence Attributes
-     * 
-     * @param ReflectionAttribute $attribute
+     *
+     * @param ReflectionAttribute<Sequence>|false $attribute
      * @return false|int
      */
     public function getCurrentPosition(false|ReflectionAttribute $attribute): false|int
