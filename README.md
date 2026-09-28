@@ -152,4 +152,5 @@ Psalm runs with `errorLevel="5"` (mirroring the original project configuration).
 
 ## License
 
-MIT (see [LICENSE](LICENSE)).
+This project is licensed under the BSD 3‑Clause License.  
+See the [LICENSE](./LICENSE) file for the full text.
