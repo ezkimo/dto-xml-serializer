@@ -1,6 +1,6 @@
 # mmnewmedia/dto-xml-serializer
 
-DTO <-> XML and DTO <-> JSON serialization for PHP, driven by XSD-like PHP attribute classes.
+DTO -> XML and DTO <-> JSON serialization for PHP, driven by XSD-like PHP attribute classes.
 
 The library maps your PHP objects to XML and JSON based on structural attributes that mirror the
 XSD constructs the model is derived from. It is the serialization core originally extracted from the
