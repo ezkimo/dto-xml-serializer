@@ -68,7 +68,7 @@ use SplObjectStorage;
 
 #[Xsd\ComplexType]
 #[Xsd\Schema(targetNamespace: 'urn:example:invoice')]
-#[Xsd\Element(namespace: HeaderNamespaces::INV, name: 'Invoice', type: InvoiceType::class)]
+#[Xsd\RootElement(namespace: HeaderNamespaces::INV, name: 'Invoice', type: InvoiceType::class)]
 final readonly class InvoiceType
 {
     public function __construct(
