@@ -98,7 +98,7 @@ final class XmlDtoSerializerTest extends TestCase
     public function testSerializeRequiresElementAttributeOnRoot(): void
     {
         $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('Missing #[Element] attribute');
+        $this->expectExceptionMessage('Missing #[RootElement] attribute');
 
         $serializer = new XmlDtoSerializer();
         $serializer->serialize(new \stdClass());

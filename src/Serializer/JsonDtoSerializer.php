@@ -14,6 +14,7 @@ use MMNewmedia\Model\ValueableInterface;
 use MMNewmedia\Xsd\Attribute;
 use MMNewmedia\Xsd\Element;
 use MMNewmedia\Xsd\Extension;
+use MMNewmedia\Xsd\RootElement;
 use MMNewmedia\Xsd\Sequence;
 use Override;
 use ReflectionAttribute;
@@ -123,7 +124,7 @@ class JsonDtoSerializer implements AdapterInterface
             return (string) $name;
         }
 
-        $element = $this->getAttribute($reflector, Element::class);
+        $element = $this->getAttribute($reflector, RootElement::class) ?? $this->getAttribute($reflector, Element::class);
         if ($element !== null) {
             $name = $element->newInstance()->name;
             if ($name !== null) {

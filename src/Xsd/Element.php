@@ -7,8 +7,8 @@ namespace MMNewmedia\Xsd;
 use Attribute;
 use BackedEnum;
 
-#[Attribute(Attribute::TARGET_PROPERTY | Attribute::TARGET_CLASS)]
-final readonly class Element
+#[Attribute(Attribute::TARGET_PROPERTY)]
+readonly class Element
 {
     public function __construct(
         public ?bool $abstract = null,
