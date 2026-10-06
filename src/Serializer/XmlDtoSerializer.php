@@ -84,9 +84,10 @@ class XmlDtoSerializer implements AdapterInterface
 
         $dom = new DOMDocument('1.0', 'UTF-8');
         $dom->formatOutput = true;
-
+        
+        /** @var \ReflectionAttribute<\MMNewmedia\Xsd\RootElement> $rootAttribute */ 
         $rootName = $rootAttribute->newInstance()->name;
-        /** @var \ReflectionAttribute<\MMNewmedia\Xsd\Element> $rootAttr */ $rootAttr = $rootAttribute; $rootNamespace = $this->getElementNamespace($reflector, $rootAttr);
+        $rootNamespace = $this->getElementNamespace($reflector, $rootAttribute);
 
         $qualifiedRootName = $this->getElementQualifiedName($rootName, $rootNamespace);
         $rootNode = $dom->createElementNs($rootNamespace, $qualifiedRootName);
