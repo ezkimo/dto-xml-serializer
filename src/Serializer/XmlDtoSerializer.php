@@ -15,6 +15,7 @@ use MMNewmedia\Xsd\Attribute;
 use MMNewmedia\Xsd\ComplexType;
 use MMNewmedia\Xsd\Element;
 use MMNewmedia\Xsd\Extension;
+use MMNewmedia\Xsd\RootElement;
 use MMNewmedia\Xsd\Schema;
 use MMNewmedia\Xsd\Sequence;
 use MMNewmedia\Xsd\SimpleContent;
@@ -75,15 +76,16 @@ class XmlDtoSerializer implements AdapterInterface
     protected function dtoToXml(object $dto): string
     {
         $reflector = new ReflectionClass($dto);
-        $rootAttribute = $reflector->getAttributes(Element::class)[0] ?? false;
+        $rootAttribute = $reflector->getAttributes(RootElement::class)[0] ?? false;
 
         if ($rootAttribute === false) {
-            throw new RuntimeException('Missing #[Element] attribute');
+            throw new RuntimeException('Missing #[RootElement] attribute');
         }
 
         $dom = new DOMDocument('1.0', 'UTF-8');
         $dom->formatOutput = true;
-
+        
+        /** @var \ReflectionAttribute<\MMNewmedia\Xsd\RootElement> $rootAttribute */ 
         $rootName = $rootAttribute->newInstance()->name;
         $rootNamespace = $this->getElementNamespace($reflector, $rootAttribute);
 
@@ -148,7 +150,7 @@ class XmlDtoSerializer implements AdapterInterface
      * keinen Namen, wird der Name der ReflectionProperty Instanz genommen.
      *
      * @param ReflectionProperty $element
-     * @param ReflectionAttribute<Element> $attribute
+     * @param ReflectionAttribute<Element|RootElement> $attribute
      * @return string
      */
     protected function getElementName(ReflectionProperty $element, ReflectionAttribute $attribute): string
@@ -171,9 +173,10 @@ class XmlDtoSerializer implements AdapterInterface
      * Liefert den Namespace des übergebenen Elements.
      *
      * @param ReflectionClass|ReflectionProperty $element
-     * @param ReflectionAttribute<Element> $attribute
+     * @param ReflectionAttribute<Element|RootElement> $attribute
      * @return null|string
      */
+    /** @param ReflectionAttribute<Element|RootElement> $attribute */
     protected function getElementNamespace(ReflectionClass|ReflectionProperty $element, ReflectionAttribute $attribute): ?string
     {
         $namespace = $attribute->newInstance()->namespace;

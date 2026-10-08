@@ -12,7 +12,7 @@ use SplObjectStorage;
     targetNamespace: 'urn:example:invoice',
     xmlns: 'urn:example:invoice',
 )]
-#[Xsd\Element(namespace: Namespaces::INV, name: 'TestInvoice', type: TestInvoiceType::class)]
+#[Xsd\RootElement(namespace: Namespaces::INV, name: 'TestInvoice', type: TestInvoiceType::class)]
 final readonly class TestInvoiceType
 {
     public function __construct(
