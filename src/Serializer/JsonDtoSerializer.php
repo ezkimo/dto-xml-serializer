@@ -34,6 +34,8 @@ use SplObjectStorage;
  */
 class JsonDtoSerializer implements AdapterInterface
 {
+    use EnumerationValidator;
+
     /**
      * Zuordnung des JSON Wurzelelementnamens zu der fqcn des DTOs.
      *
@@ -309,6 +311,8 @@ class JsonDtoSerializer implements AdapterInterface
      */
     protected function normalizeValue(mixed $value, string $className): mixed
     {
+        $this->assertEnumerationValue($className, $value);
+
         if ($value instanceof DateTimeInterface) {
             return $this->formatDateTime($value, $this->getExtensionBase($className));
         }
@@ -518,6 +522,8 @@ class JsonDtoSerializer implements AdapterInterface
         $object = $reflector->newInstanceArgs($this->completeRequiredArguments($reflector, $arguments));
 
         $converted = $this->convertValue($value, $className);
+        $this->assertEnumerationValue($className, $converted);
+
         if ($converted !== null) {
             $object->setValue($converted);
         }
