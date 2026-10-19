@@ -58,6 +58,38 @@ final class AmountType implements ValueableInterface
 }
 ```
 
+Simple types with an enumeration restriction declare their allowed values via a PHP `BackedEnum`
+(`#[Xsd\Enumeration]` mirrors the XSD `simpleType` / `restriction` / `enumeration` construct):
+
+```php
+use MMNewmedia\Xsd;
+
+enum CurrencyCode: string
+{
+    case EUR = 'EUR';
+    case USD = 'USD';
+}
+
+#[Xsd\SimpleContent]
+#[Xsd\Extension(base: 'xsd:string')]
+#[Xsd\Enumeration(enum: CurrencyCode::class, name: 'CurrencyCodeType')]
+final class CurrencyCodeType implements ValueableInterface
+{
+    use ValueableTrait;
+}
+```
+
+Both serializers validate leaf values against the enumeration when serializing and unserializing
+and throw a `RuntimeException` for values outside the declared value space:
+
+```
+Value 'CHF' is not part of enumeration 'CurrencyCodeType' (EUR, USD).
+```
+
+Use `#[Xsd\Enumeration(enum: ..., validate: false)]` to keep the declaration purely declarative
+(e.g. for documentation or a future XSD export) without runtime enforcement. `int`-backed enums
+are supported; their values are compared as strings.
+
 Complex types are annotated with `#[ComplexType]` (optionally `#[Schema]` for a target namespace) and
 their properties with `#[Element]` plus `#[Sequence]` for XSD ordering; collections use
 `SplObjectStorage`:
