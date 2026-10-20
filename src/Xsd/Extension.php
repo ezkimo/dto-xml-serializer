@@ -6,6 +6,9 @@ namespace MMNewmedia\Xsd;
 
 use Attribute;
 
+/**
+ * @deprecated Since version 1.x. Use #[Restriction] with #[SimpleType] for simple type restrictions (e.g. with #[Enumeration]) to mirror XSD more accurately. Kept for backward compatibility.
+ */
 #[Attribute(Attribute::TARGET_CLASS)]
 final readonly class Extension
 {
