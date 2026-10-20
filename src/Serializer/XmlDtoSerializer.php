@@ -29,6 +29,7 @@ use SplObjectStorage;
 class XmlDtoSerializer implements AdapterInterface
 {
     use EnumerationValidator;
+    use PatternValidator;
 
     /**
      * Mappgin von Namespace URI zu Namespace Prefixes
@@ -246,6 +247,7 @@ class XmlDtoSerializer implements AdapterInterface
         if (is_object($value) && $value instanceof ValueableInterface) {
             $this->assertEnumerationValue($value::class, $value->getValue());
             $result = $value->getValue();
+            $this->assertPatternValues($value::class, $result);
 
             if ($result instanceof DateTimeInterface) {
                 $rootClassName = $this->getRootClass($value::class);
@@ -267,6 +269,14 @@ class XmlDtoSerializer implements AdapterInterface
             }
         } elseif (is_scalar($value)) {
             $result = $value;
+        }
+
+        if (is_object($value) && $value instanceof ValueableInterface) {
+            // Pattern validation already done above if needed
+        } elseif (is_scalar($value)) {
+            // No class context here for simple scalar values
+        } else {
+            // N/A
         }
 
         if (is_bool($result)) {
@@ -442,6 +452,7 @@ class XmlDtoSerializer implements AdapterInterface
                         $instanceValue = '';
                         if ($instance instanceof ValueableInterface) {
                             $this->assertEnumerationValue($instance::class, $instance->getValue());
+                            $this->assertPatternValues($instance::class, $instance->getValue());
                             $instanceValue = $instance->getValue();
                         }
 
