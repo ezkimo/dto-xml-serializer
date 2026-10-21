@@ -2,16 +2,13 @@
 
 DTO -> XML and DTO <-> JSON serialization for PHP, driven by XSD-like PHP attribute classes.
 
-The library maps your PHP objects to XML and JSON based on structural attributes that mirror the
-XSD constructs the model is derived from. It is the serialization core originally extracted from the
-[ezkimo/x-rechnung](https://github.com) project (xRechnung / EN 16931), where the generated models for
-both CII (Cross-Industry Invoice) and UBL 2.1 use these attributes.
+The library maps your PHP objects to XML and JSON based on structural attributes that mirror the XSD constructs the model is derived from.
 
 ## Requirements
 
-- PHP ^8.4
+- PHP ^8.4|^8.5
 - `ext-dom`, `ext-json`
-- laminas/laminas-serializer ^4.0
+- `laminas/laminas-serializer` ^4.0
 
 ## Installation
 
@@ -19,150 +16,49 @@ both CII (Cross-Industry Invoice) and UBL 2.1 use these attributes.
 composer require mmnewmedia/dto-xml-serializer
 ```
 
-## Overview
-
-```
-MMNewmedia\Xsd\            PHP attribute classes that mirror XSD constructs
-MMNewmedia\Serializer\     JsonDtoSerializer, XmlDtoSerializer (both Laminas Serializer adapters)
-MMNewmedia\Data\           SequenceHeap for XSD sequence ordering
-MMNewmedia\Model\          ValueableInterface / ValueableTrait (simple content contract)
-```
-
-### Annotating your DTOs
-
-Leaf / simple content types implement `ValueableInterface` (via `ValueableTrait`) and describe their
-XSD base type with `#[SimpleContent]` + `#[Extension]`:
+## Quick Start
 
 ```php
 use MMNewmedia\Model\ValueableInterface;
 use MMNewmedia\Model\ValueableTrait;
 use MMNewmedia\Xsd;
 
-#[Xsd\SimpleContent]
-#[Xsd\Extension(base: 'xsd:date')]
-final class IssueDateType implements ValueableInterface
-{
-    use ValueableTrait;
-}
-
-#[Xsd\SimpleContent]
-#[Xsd\Extension(base: 'xsd:decimal')]
-final class AmountType implements ValueableInterface
-{
-    use ValueableTrait;
-
-    public function __construct(
-        #[Xsd\Attribute(name: 'currencyID', type: 'xsd:string', use: Xsd\AttributeUseType::OPTIONAL)]
-        public ?string $currencyID = null,
-    ) {}
-}
-```
-
-Simple types with an enumeration restriction declare their allowed values via a PHP `BackedEnum`
-(`#[Xsd\Enumeration]` mirrors the XSD `simpleType` / `restriction` / `enumeration` construct):
-
-```php
-use MMNewmedia\Xsd;
-
-enum CurrencyCode: string
-{
-    case EUR = 'EUR';
-    case USD = 'USD';
-}
-
-#[Xsd\SimpleContent]
-#[Xsd\Extension(base: 'xsd:string')]
-#[Xsd\Enumeration(enum: CurrencyCode::class, name: 'CurrencyCodeType')]
+#[Xsd\SimpleType]
+#[Xsd\Restriction(base: 'xsd:string')]
+#[Xsd\Enumeration(enum: CurrencyCode::class)]
 final class CurrencyCodeType implements ValueableInterface
 {
     use ValueableTrait;
 }
 ```
 
-Both serializers validate leaf values against the enumeration when serializing and unserializing
-and throw a `RuntimeException` for values outside the declared value space:
-
-```
-Value 'CHF' is not part of enumeration 'CurrencyCodeType' (EUR, USD).
-```
-
-Use `#[Xsd\Enumeration(enum: ..., validate: false)]` to keep the declaration purely declarative
-(e.g. for documentation or a future XSD export) without runtime enforcement. `int`-backed enums
-are supported; their values are compared as strings.
-
-Complex types are annotated with `#[ComplexType]` (optionally `#[Schema]` for a target namespace) and
-their properties with `#[Element]` plus `#[Sequence]` for XSD ordering; collections use
-`SplObjectStorage`:
-
 ```php
-use MMNewmedia\Xsd;
-use SplObjectStorage;
+use MMNewmedia\Serializer\XmlDtoSerializer;
 
-#[Xsd\ComplexType]
-#[Xsd\Schema(targetNamespace: 'urn:example:invoice')]
-#[Xsd\RootElement(namespace: HeaderNamespaces::INV, name: 'Invoice', type: InvoiceType::class)]
-final readonly class InvoiceType
-{
-    public function __construct(
-        #[Xsd\Element(namespace: HeaderNamespaces::CBC, name: 'ID', type: IdType::class)]
-        #[Xsd\Sequence(position: 1)]
-        public IdType $id,
-        #[Xsd\Element(name: 'Note', maxOccurs: 99, type: NoteType::class)]
-        #[Xsd\Sequence(position: 2)]
-        public SplObjectStorage $note,
-    ) {}
-}
+$serializer = new XmlDtoSerializer();
+$serializer->setNamespaces(HeaderNamespaces::class);
+$xml = $serializer->serialize($invoice);
 ```
-
-### JSON
 
 ```php
 use MMNewmedia\Serializer\JsonDtoSerializer;
 
 $serializer = new JsonDtoSerializer();
-
-// DTO -> JSON (root name is taken from the registered root class or the #[Element] attribute)
-$json = $serializer->serialize($invoice);
-
-// JSON -> DTO (requires the root element name to be registered)
-$serializer->setRootClasses(['Invoice' => InvoiceType::class, 'CrossIndustryInvoice' => CrossIndustryInvoiceType::class]);
+$serializer->setRootClasses(['Invoice' => InvoiceType::class]);
 $invoice = $serializer->unserialize($json);
 ```
 
-Simple content types are serialized as scalar values. If a simple content type declares attributes,
-its JSON representation becomes an object with the attributes as keys and the value under the key
-`value`.
+## Documentation
 
-### XML
+See the full documentation in the [`/docs`](docs/) directory:
 
-```php
-use MMNewmedia\Serializer\XmlDtoSerializer;
-
-$serializer = new XmlDtoSerializer();
-
-// Map namespace URIs to prefixes via a BackedEnum (case name => prefix after the last underscore)
-$serializer->setNamespaces(HeaderNamespaces::class);
-
-// For model families that declare the namespace per element (UBL), prefer element namespaces:
-$serializer->setUsePropertyNamespaces(true);
-
-$xml = $serializer->serialize($invoice);
-```
-
-With `usePropertyNamespaces` disabled (the default, matching the CII model), child elements inherit
-the `targetNamespace` of the enclosing complex type's `#[Schema]` attribute; the property-level
-`#[Element]` namespaces act as a fallback only.
-
-### Namespaces enum
-
-```php
-enum HeaderNamespaces: string
-{
-    case INV = 'urn:example:invoice';
-    case CBC = 'urn:example:commonbasic';
-    case CAC = 'urn:example:commonaggregate';
-}
-```
+- [Overview](docs/index.md)
+- [Getting Started](docs/getting-started.md)
+- [Mapping](docs/mapping/) - XSD <-> PHP mappings for simple types, complex types, attributes, root elements
+- [Serialization](docs/serialization/) - XML and JSON serialization
+- [Validation](docs/validation.md)
+- [Namespaces](docs/namespaces.md)
+- [Migration Guide](docs/migration.md)
 
 ## Tests
 
@@ -171,16 +67,13 @@ composer install
 composer test
 ```
 
-## Static analysis
+## Static Analysis
 
 ```bash
 composer psalm
 ```
 
-Psalm runs with `errorLevel="5"` (mirroring the original project configuration). Note that Psalm treats
-`ReflectionAttribute<T>` as invariant, so helpers that accept attributes read from specific
-`#[Element]` / `#[Schema]` / `#[Sequence]` attributes are annotated with the exact generic, e.g.
-`@param ReflectionAttribute<Element>`.
+Psalm runs with `errorLevel="5"`. See `psalm.xml` for details.
 
 ## License
 
