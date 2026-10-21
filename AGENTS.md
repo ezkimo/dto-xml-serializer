@@ -59,6 +59,8 @@ Pushing the tag triggers two things:
 
 A release that was missed can be created manually via **Actions -> Release -> Run workflow**, passing the existing tag. The workflow fails if the release already exists, so it never overwrites a published release.
 
+The release workflow checks out the repository and passes `--repo "${{ github.repository }}"` to `gh release create`. Both are required: without the checkout the runner has no git context, and `gh` fails with `failed to run git: fatal: not a git repository`. The `--repo` flag makes the target repository explicit and removes the dependency on the local clone entirely.
+
 ## Development Guidelines
 
 - Follow existing attribute patterns when adding new XSD constructs
