@@ -53,18 +53,20 @@ final class PostalCodeType implements ValueableInterface
 
 ### Multiple Patterns
 
-Multiple `#[Pattern]` attributes are supported (repeatable). All patterns are checked:
+Multiple `#[Pattern]` attributes are supported (repeatable). Following the XSD specification, multiple pattern facets of a restriction are **combined with AND** - a value has to match *every* declared pattern:
 
 ```php
 #[Xsd\SimpleType(name: 'CodeType')]
 #[Xsd\Restriction(base: 'xsd:string')]
 #[Xsd\Pattern(value: '^[A-Z]{3}$')]
-#[Xsd\Pattern(value: '^[0-9]{3}$')]
+#[Xsd\Pattern(value: '^[^0-9]+$')]
 final class CodeType implements ValueableInterface
 {
     use ValueableTrait;
 }
 ```
+
+A value like `ABC` is valid, while `AB1` violates the second pattern.
 
 If a value doesn't match a pattern, a `RuntimeException` is thrown:
 

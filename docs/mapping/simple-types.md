@@ -139,7 +139,7 @@ final class Code3Type implements ValueableInterface
 ```xml
 <xs:restriction base="xs:string">
   <xs:pattern value="^[A-Z]{3}$"/>
-  <xs:pattern value="^[0-9]{3}$"/>
+  <xs:pattern value="^[^0-9]+$"/>
 </xs:restriction>
 ```
 
@@ -148,12 +148,14 @@ final class Code3Type implements ValueableInterface
 #[Xsd\SimpleType(name: 'CodeType')]
 #[Xsd\Restriction(base: 'xsd:string')]
 #[Xsd\Pattern(value: '^[A-Z]{3}$')]
-#[Xsd\Pattern(value: '^[0-9]{3}$')]
+#[Xsd\Pattern(value: '^[^0-9]+$')]
 final class CodeType implements ValueableInterface
 {
     use ValueableTrait;
 }
 ```
+
+> **Note:** As defined by the XSD specification, multiple pattern facets of a restriction are combined with AND. A value has to match every declared pattern.
 
 ### `#[Pattern]` Properties
 
