@@ -175,11 +175,14 @@ class XmlDtoSerializer implements AdapterInterface
     /**
      * Liefert den Namespace des übergebenen Elements.
      *
+     * Psalm behandelt ReflectionAttribute<T> als invariant. Da das Attribut sowohl
+     * vom Typ Element als auch vom Typ RootElement gelesen werden kann, wird die
+     * Vereinigung ausserhalb der Generics notiert.
+     *
      * @param ReflectionClass|ReflectionProperty $element
-     * @param ReflectionAttribute<Element|RootElement> $attribute
+     * @param ReflectionAttribute<Element>|ReflectionAttribute<RootElement> $attribute
      * @return null|string
      */
-    /** @param ReflectionAttribute<Element|RootElement> $attribute */
     protected function getElementNamespace(ReflectionClass|ReflectionProperty $element, ReflectionAttribute $attribute): ?string
     {
         $namespace = $attribute->newInstance()->namespace;
@@ -269,14 +272,6 @@ class XmlDtoSerializer implements AdapterInterface
             }
         } elseif (is_scalar($value)) {
             $result = $value;
-        }
-
-        if (is_object($value) && $value instanceof ValueableInterface) {
-            // Pattern validation already done above if needed
-        } elseif (is_scalar($value)) {
-            // No class context here for simple scalar values
-        } else {
-            // N/A
         }
 
         if (is_bool($result)) {
