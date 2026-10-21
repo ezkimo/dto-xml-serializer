@@ -38,6 +38,27 @@ MMNewmedia/dto-xml-serializer is a PHP 8.4+ library for DTO <-> XML and DTO <-> 
 - Test fixtures in `tests/Fixtures/`
 - Unit tests in `tests/Xsd/`, serializer tests in `tests/Serializer/`
 
+## Releases
+
+The version is derived from the git tag - `composer.json` deliberately has no `version` field, so Packagist resolves it from the tag.
+
+- Tags use plain semantic versions without a `v` prefix (`1.0.10`), matching the existing history
+- Annotated tags point at the merge commit on `main`
+- Releasing from a clean `main`:
+
+```bash
+git checkout main && git pull --ff-only
+git tag -a 1.0.11 -m "Release 1.0.11"
+git push origin 1.0.11
+```
+
+Pushing the tag triggers two things:
+
+- `.github/workflows/release.yml` creates the GitHub Release with auto-generated notes from the merged pull requests
+- Packagist publishes the version via the webhook it maintains on this repository (the package page shows "This package is auto-updated")
+
+A release that was missed can be created manually via **Actions -> Release -> Run workflow**, passing the existing tag. The workflow fails if the release already exists, so it never overwrites a published release.
+
 ## Development Guidelines
 
 - Follow existing attribute patterns when adding new XSD constructs
@@ -53,3 +74,5 @@ MMNewmedia/dto-xml-serializer is a PHP 8.4+ library for DTO <-> XML and DTO <-> 
 - Deprecated `#[SimpleContent] + #[Extension] + #[Enumeration]` in favor of `#[SimpleType] + #[Restriction] + #[Enumeration]` for enumerated simple types
 - Marked `Extension` as deprecated with `@deprecated` docblock
 - Pattern validation enforced by both serializers, throwing `RuntimeException` on mismatch
+- Added a CI workflow running tests and static analysis on pull requests (issue #11)
+- Added a release workflow creating GitHub Releases from version tags (issue #13)
