@@ -24,6 +24,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Resolve tag
         id: resolve
         env:
@@ -50,10 +53,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ steps.resolve.outputs.tag }}
+          REPO: ${{ github.repository }}
         run: |
           set -eu
 
           gh release create "$TAG" \
+            --repo "$REPO" \
             --title "$TAG" \
             --generate-notes \
             --verify-tag
