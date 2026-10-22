@@ -30,6 +30,7 @@ class XmlDtoSerializer implements AdapterInterface
 {
     use EnumerationValidator;
     use PatternValidator;
+    use StringLengthValidator;
 
     /**
      * Mappgin von Namespace URI zu Namespace Prefixes
@@ -251,6 +252,7 @@ class XmlDtoSerializer implements AdapterInterface
             $this->assertEnumerationValue($value::class, $value->getValue());
             $result = $value->getValue();
             $this->assertPatternValues($value::class, $result);
+            $this->assertStringLength($value::class, $result);
 
             if ($result instanceof DateTimeInterface) {
                 $rootClassName = $this->getRootClass($value::class);
@@ -448,6 +450,7 @@ class XmlDtoSerializer implements AdapterInterface
                         if ($instance instanceof ValueableInterface) {
                             $this->assertEnumerationValue($instance::class, $instance->getValue());
                             $this->assertPatternValues($instance::class, $instance->getValue());
+                            $this->assertStringLength($instance::class, $instance->getValue());
                             $instanceValue = $instance->getValue();
                         }
 

@@ -166,8 +166,89 @@ final class CodeType implements ValueableInterface
 
 Targets: `TARGET_CLASS \| TARGET_PROPERTY \| Attribute::IS_REPEATABLE`
 
+## MinLength
+
+Minimum number of characters for a string value.
+
+**XSD:**
+```xml
+<xs:simpleType name="NameType">
+  <xs:restriction base="xs:string">
+    <xs:minLength value="1"/>
+  </xs:restriction>
+</xs:simpleType>
+```
+
+**PHP:**
+```php
+#[Xsd\SimpleType(name: 'NameType')]
+#[Xsd\Restriction(base: 'xsd:string')]
+#[Xsd\MinLength(1)]
+final class NameType implements ValueableInterface
+{
+    use ValueableTrait;
+}
+```
+
+### `#[MinLength]` Properties
+
+| Property | XSD | Description |
+| --- | --- | --- |
+| `value` | `@value` | Minimum number of characters (required) |
+| `id` | `@id` | Unique ID |
+
+Targets: `TARGET_CLASS \| TARGET_PROPERTY`
+
+## MaxLength
+
+Maximum number of characters for a string value.
+
+**XSD:**
+```xml
+<xs:simpleType name="NameType">
+  <xs:restriction base="xs:string">
+    <xs:maxLength value="35"/>
+  </xs:restriction>
+</xs:simpleType>
+```
+
+**PHP:**
+```php
+#[Xsd\SimpleType(name: 'NameType')]
+#[Xsd\Restriction(base: 'xsd:string')]
+#[Xsd\MaxLength(35)]
+final class NameType implements ValueableInterface
+{
+    use ValueableTrait;
+}
+```
+
+### `#[MaxLength]` Properties
+
+| Property | XSD | Description |
+| --- | --- | --- |
+| `value` | `@value` | Maximum number of characters (required) |
+| `id` | `@id` | Unique ID |
+
+Targets: `TARGET_CLASS \| TARGET_PROPERTY`
+
+Both facets can be combined on the same type:
+
+```php
+#[Xsd\SimpleType(name: 'NameType')]
+#[Xsd\Restriction(base: 'xsd:string')]
+#[Xsd\MinLength(1)]
+#[Xsd\MaxLength(35)]
+final class NameType implements ValueableInterface
+{
+    use ValueableTrait;
+}
+```
+
 ## Notes
 
 - For enumerated simple types, the recommended pattern is `#[SimpleType] + #[Restriction] + #[Enumeration]` (see [Migration Guide](../migration.md)).
-- Both serializers enforce validation for Enumerations and Patterns at runtime.
+- Both serializers enforce validation for Enumerations, Patterns, MinLength, and MaxLength at runtime.
+- Length is measured in UTF-8 characters via `mb_strlen()`, not in bytes.
+- Inherited length declarations are combined using the strictest constraint: the highest `minLength` and the lowest `maxLength` win.
 - `ValueableInterface` + `ValueableTrait` provide `getValue()`/`setValue()` for simple content.

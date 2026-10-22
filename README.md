@@ -7,7 +7,7 @@ The library maps your PHP objects to XML and JSON based on structural attributes
 ## Requirements
 
 - PHP ^8.4|^8.5
-- `ext-dom`, `ext-json`
+- `ext-dom`, `ext-json`, `ext-mbstring`
 - `laminas/laminas-serializer` ^4.0
 
 ## Installation
