@@ -1,6 +1,6 @@
 # Validation
 
-Both serializers validate simple content values against declared facets.
+Both serializers validate simple content values against declared facets (enumeration, pattern, and length).
 
 ## Enumeration Validation
 
@@ -80,3 +80,45 @@ Value 'abc' does not match pattern '^[A-Z]{3}$'.
 - Non-scalar values (e.g. `DateTimeInterface`) are skipped for pattern/enumeration scalar validation as appropriate.
 - Invalid regex patterns are gracefully skipped for robustness.
 - Validation walks the inheritance tree like enumeration validation.
+
+## Length Validation
+
+`minLength` and `maxLength` are validated via `StringLengthValidator` (separate from enumeration and pattern validation).
+
+```php
+#[Xsd\SimpleType(name: 'NameType')]
+#[Xsd\Restriction(base: 'xsd:string')]
+#[Xsd\MinLength(1)]
+#[Xsd\MaxLength(35)]
+final class NameType implements ValueableInterface
+{
+    use ValueableTrait;
+}
+```
+
+Both bounds are inclusive:
+
+- a value with exactly `minLength` characters is valid
+- a value with exactly `maxLength` characters is valid
+
+If a value is outside the declared bounds, a `RuntimeException` is thrown:
+
+```
+Value 'AB' is shorter than minLength 3 (length 2).
+Value 'ABCDEF' is longer than maxLength 5 (length 6).
+```
+
+### Inheritance
+
+Inherited length declarations are treated as an intersection, matching XSD restriction derivation:
+
+- effective `minLength` = highest declaration in the inheritance chain
+- effective `maxLength` = lowest declaration in the inheritance chain
+
+### Notes
+
+- Length is measured in UTF-8 characters via `mb_strlen()`, not in bytes.
+- Validation is applied during serialization and deserialization in both `XmlDtoSerializer` and `JsonDtoSerializer`.
+- Non-scalar values (e.g. `DateTimeInterface`) are skipped, consistent with enumeration and pattern validation.
+- Whitespace is not normalized; length is measured on the stored value as-is.
+- Validation order is enumeration, then pattern, then length.

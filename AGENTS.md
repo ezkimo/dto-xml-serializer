@@ -7,14 +7,14 @@ MMNewmedia/dto-xml-serializer is a PHP 8.4+ library for DTO <-> XML and DTO <-> 
 ## Tech Stack
 
 - PHP ^8.4|^8.5
-- ext-dom, ext-json
+- ext-dom, ext-json, ext-mbstring
 - laminas/laminas-serializer ^4.0
 - PHPUnit ^13.0, Psalm ^6.5
 
 ## Project Structure
 
-- `src/Xsd/` - PHP attribute classes that mirror XSD constructs (Element, ComplexType, SimpleContent, Extension, SimpleType, Restriction, Pattern, Enumeration, Attribute, Sequence, Schema, RootElement, etc.)
-- `src/Serializer/` - JsonDtoSerializer, XmlDtoSerializer (Laminas Serializer adapters), and validation traits (EnumerationValidator, PatternValidator)
+- `src/Xsd/` - PHP attribute classes that mirror XSD constructs (Element, ComplexType, SimpleContent, Extension, SimpleType, Restriction, Pattern, MinLength, MaxLength, Enumeration, Attribute, Sequence, Schema, RootElement, etc.)
+- `src/Serializer/` - JsonDtoSerializer, XmlDtoSerializer (Laminas Serializer adapters), and validation traits (EnumerationValidator, PatternValidator, StringLengthValidator)
 - `src/Data/` - SequenceHeap for XSD sequence ordering
 - `src/Model/` - ValueableInterface / ValueableTrait for simple content types
 
@@ -27,6 +27,7 @@ MMNewmedia/dto-xml-serializer is a PHP 8.4+ library for DTO <-> XML and DTO <-> 
 - Serializers use reflection to read attributes and validate values
 - Enumerations are validated via `EnumerationValidator` trait walking inheritance tree
 - Patterns are validated via `PatternValidator` trait walking inheritance tree (separate from enumeration validation)
+- String lengths are validated via `StringLengthValidator` trait walking inheritance tree; inherited bounds are intersected (strictest wins)
 - Simple content types implement `ValueableInterface` via `ValueableTrait`
 - Namespace handling: set namespace enum via `setNamespaces()`, use property-level namespaces with `setUsePropertyNamespaces(true)`
 - Sequence ordering is managed via `#[Sequence(position: ...)]` and `SequenceHeap`
@@ -78,3 +79,6 @@ The release workflow checks out the repository and passes `--repo "${{ github.re
 - Pattern validation enforced by both serializers, throwing `RuntimeException` on mismatch
 - Added a CI workflow running tests and static analysis on pull requests (issue #11)
 - Added a release workflow creating GitHub Releases from version tags (issue #13)
+- Added `#[MinLength]` and `#[MaxLength]` attributes for `xsd:string` simple type restrictions (issue #17)
+- Added `StringLengthValidator` trait; length is measured in UTF-8 characters via `mb_strlen`, inherited bounds use the strictest constraint
+- Length validation enforced by both serializers, throwing `RuntimeException` on violation

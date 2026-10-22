@@ -36,6 +36,7 @@ class JsonDtoSerializer implements AdapterInterface
 {
     use EnumerationValidator;
     use PatternValidator;
+    use StringLengthValidator;
 
     /**
      * Zuordnung des JSON Wurzelelementnamens zu der fqcn des DTOs.
@@ -314,6 +315,7 @@ class JsonDtoSerializer implements AdapterInterface
     {
         $this->assertEnumerationValue($className, $value);
         $this->assertPatternValues($className, $value);
+        $this->assertStringLength($className, $value);
 
         if ($value instanceof DateTimeInterface) {
             return $this->formatDateTime($value, $this->getExtensionBase($className));
@@ -526,6 +528,7 @@ class JsonDtoSerializer implements AdapterInterface
         $converted = $this->convertValue($value, $className);
         $this->assertEnumerationValue($className, $converted);
         $this->assertPatternValues($className, $converted);
+        $this->assertStringLength($className, $converted);
 
         if ($converted !== null) {
             $object->setValue($converted);
