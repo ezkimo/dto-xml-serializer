@@ -34,6 +34,7 @@ use SplObjectStorage;
  */
 class JsonDtoSerializer implements AdapterInterface
 {
+    use DecimalValidator;
     use EnumerationValidator;
     use PatternValidator;
     use StringLengthValidator;
@@ -316,6 +317,7 @@ class JsonDtoSerializer implements AdapterInterface
         $this->assertEnumerationValue($className, $value);
         $this->assertPatternValues($className, $value);
         $this->assertStringLength($className, $value);
+        $this->assertDecimalConstraints($className, $value);
 
         if ($value instanceof DateTimeInterface) {
             return $this->formatDateTime($value, $this->getExtensionBase($className));
@@ -529,6 +531,7 @@ class JsonDtoSerializer implements AdapterInterface
         $this->assertEnumerationValue($className, $converted);
         $this->assertPatternValues($className, $converted);
         $this->assertStringLength($className, $converted);
+        $this->assertDecimalConstraints($className, $converted);
 
         if ($converted !== null) {
             $object->setValue($converted);

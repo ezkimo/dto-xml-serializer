@@ -1,6 +1,6 @@
 # Validation
 
-Both serializers validate simple content values against declared facets (enumeration, pattern, and length).
+Both serializers validate simple content values against declared facets (enumeration, pattern, length, and decimal constraints).
 
 ## Enumeration Validation
 
@@ -122,3 +122,84 @@ Inherited length declarations are treated as an intersection, matching XSD restr
 - Non-scalar values (e.g. `DateTimeInterface`) are skipped, consistent with enumeration and pattern validation.
 - Whitespace is not normalized; length is measured on the stored value as-is.
 - Validation order is enumeration, then pattern, then length.
+
+## Decimal Validation
+
+`fractionDigits`, `maxInclusive`, and `minExclusive` are validated via `DecimalValidator` (separate from enumeration, pattern, and length validation).
+
+```php
+#[Xsd\SimpleType(name: 'AmountType')]
+#[Xsd\Restriction(base: 'xsd:decimal')]
+#[Xsd\FractionDigits(2)]
+#[Xsd\MaxInclusive('999999.99')]
+#[Xsd\MinExclusive('0')]
+final class AmountType implements ValueableInterface
+{
+    use ValueableTrait;
+}
+```
+
+### FractionDigits
+
+`fractionDigits` limits the number of digits in the fractional part. Trailing zeros do not count:
+
+- `1.2300` is valid with `fractionDigits=2`
+- `1.234` is invalid with `fractionDigits=2`
+- `0.001` is invalid with `fractionDigits=2`
+
+If a value has too many fractional digits, a `RuntimeException` is thrown:
+
+```
+Value '12.345' has more than 2 fraction digits (3).
+```
+
+### MaxInclusive
+
+`maxInclusive` is inclusive: a value equal to the bound is valid, a value above it is not.
+
+```
+Value '100.01' is greater than maxInclusive 100.00.
+```
+
+### MinExclusive
+
+`minExclusive` is exclusive: a value must be strictly greater than the bound.
+
+```
+Value '0' is not greater than minExclusive 0.
+```
+
+### Inheritance
+
+Inherited decimal declarations are treated as an intersection, matching XSD restriction derivation:
+
+- effective `fractionDigits` = lowest declaration in the inheritance chain
+- effective `maxInclusive` = lowest declaration in the inheritance chain
+- effective `minExclusive` = highest declaration in the inheritance chain
+
+### Exact Comparison
+
+Bounds are compared as normalized decimal strings rather than floats, so values near the boundary and values above `2^53` are compared exactly. No `ext-bcmath` dependency is required.
+
+`maxInclusive` and `minExclusive` accept `int`, `float`, or `string`. Passing a string is recommended for high-precision bounds:
+
+```php
+#[Xsd\MaxInclusive('9007199254740993')]
+```
+
+### Non-Decimal Values
+
+When a type declares decimal facets, a value that cannot be parsed as a decimal is rejected:
+
+```
+Value 'abc' is not a valid decimal.
+```
+
+Non-scalar values (e.g. `DateTimeInterface`) are skipped, consistent with the other validators.
+
+### Notes
+
+- Validation is applied during serialization and deserialization in both `XmlDtoSerializer` and `JsonDtoSerializer`.
+- `BackedEnum` values are unwrapped before validation.
+- Normalization accepts `int`, `float`, and numeric strings, including leading signs and exponent notation produced by PHP float-to-string conversion.
+- Validation order is enumeration, pattern, length, then decimal facets.

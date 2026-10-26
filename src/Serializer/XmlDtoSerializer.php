@@ -28,6 +28,7 @@ use SplObjectStorage;
 
 class XmlDtoSerializer implements AdapterInterface
 {
+    use DecimalValidator;
     use EnumerationValidator;
     use PatternValidator;
     use StringLengthValidator;
@@ -253,6 +254,7 @@ class XmlDtoSerializer implements AdapterInterface
             $result = $value->getValue();
             $this->assertPatternValues($value::class, $result);
             $this->assertStringLength($value::class, $result);
+            $this->assertDecimalConstraints($value::class, $result);
 
             if ($result instanceof DateTimeInterface) {
                 $rootClassName = $this->getRootClass($value::class);
@@ -451,6 +453,7 @@ class XmlDtoSerializer implements AdapterInterface
                             $this->assertEnumerationValue($instance::class, $instance->getValue());
                             $this->assertPatternValues($instance::class, $instance->getValue());
                             $this->assertStringLength($instance::class, $instance->getValue());
+                            $this->assertDecimalConstraints($instance::class, $instance->getValue());
                             $instanceValue = $instance->getValue();
                         }
 
