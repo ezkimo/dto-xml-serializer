@@ -245,10 +245,135 @@ final class NameType implements ValueableInterface
 }
 ```
 
+## FractionDigits
+
+Maximum number of digits in the fractional part of a decimal value.
+
+**XSD:**
+```xml
+<xs:simpleType name="AmountType">
+  <xs:restriction base="xs:decimal">
+    <xs:fractionDigits value="2"/>
+  </xs:restriction>
+</xs:simpleType>
+```
+
+**PHP:**
+```php
+#[Xsd\SimpleType(name: 'AmountType')]
+#[Xsd\Restriction(base: 'xsd:decimal')]
+#[Xsd\FractionDigits(2)]
+final class AmountType implements ValueableInterface
+{
+    use ValueableTrait;
+}
+```
+
+### `#[FractionDigits]` Properties
+
+| Property | XSD | Description |
+| --- | --- | --- |
+| `value` | `@value` | Maximum number of fractional digits (required) |
+| `id` | `@id` | Unique ID |
+
+Targets: `TARGET_CLASS \| TARGET_PROPERTY`
+
+Trailing zeros do not increase the number of fractional digits: `1.2300` satisfies `fractionDigits=2`, while `1.234` and `0.001` do not.
+
+## MaxInclusive
+
+Maximum allowed value, including the bound itself.
+
+**XSD:**
+```xml
+<xs:simpleType name="AmountType">
+  <xs:restriction base="xs:decimal">
+    <xs:maxInclusive value="999999.99"/>
+  </xs:restriction>
+</xs:simpleType>
+```
+
+**PHP:**
+```php
+#[Xsd\SimpleType(name: 'AmountType')]
+#[Xsd\Restriction(base: 'xsd:decimal')]
+#[Xsd\MaxInclusive('999999.99')]
+final class AmountType implements ValueableInterface
+{
+    use ValueableTrait;
+}
+```
+
+### `#[MaxInclusive]` Properties
+
+| Property | XSD | Description |
+| --- | --- | --- |
+| `value` | `@value` | Maximum allowed value (required) |
+| `id` | `@id` | Unique ID |
+
+Targets: `TARGET_CLASS \| TARGET_PROPERTY`
+
+The value can be passed as `int`, `float`, or `string`. Use a string for exact decimal precision:
+
+```php
+#[Xsd\MaxInclusive('9007199254740993')]
+```
+
+## MinExclusive
+
+Minimum allowed value, excluding the bound itself.
+
+**XSD:**
+```xml
+<xs:simpleType name="AmountType">
+  <xs:restriction base="xs:decimal">
+    <xs:minExclusive value="0"/>
+  </xs:restriction>
+</xs:simpleType>
+```
+
+**PHP:**
+```php
+#[Xsd\SimpleType(name: 'AmountType')]
+#[Xsd\Restriction(base: 'xsd:decimal')]
+#[Xsd\MinExclusive('0')]
+final class AmountType implements ValueableInterface
+{
+    use ValueableTrait;
+}
+```
+
+### `#[MinExclusive]` Properties
+
+| Property | XSD | Description |
+| --- | --- | --- |
+| `value` | `@value` | Minimum allowed value, exclusive (required) |
+| `id` | `@id` | Unique ID |
+
+Targets: `TARGET_CLASS \| TARGET_PROPERTY`
+
+Like `MaxInclusive`, the value can be passed as `int`, `float`, or `string`.
+
+### Combining Decimal Facets
+
+```php
+#[Xsd\SimpleType(name: 'AmountType')]
+#[Xsd\Restriction(base: 'xsd:decimal')]
+#[Xsd\FractionDigits(2)]
+#[Xsd\MaxInclusive('999999.99')]
+#[Xsd\MinExclusive('0')]
+final class AmountType implements ValueableInterface
+{
+    use ValueableTrait;
+}
+```
+
 ## Notes
 
 - For enumerated simple types, the recommended pattern is `#[SimpleType] + #[Restriction] + #[Enumeration]` (see [Migration Guide](../migration.md)).
-- Both serializers enforce validation for Enumerations, Patterns, MinLength, and MaxLength at runtime.
+- Both serializers enforce validation for Enumerations, Patterns, MinLength, MaxLength, FractionDigits, MaxInclusive, and MinExclusive at runtime.
 - Length is measured in UTF-8 characters via `mb_strlen()`, not in bytes.
 - Inherited length declarations are combined using the strictest constraint: the highest `minLength` and the lowest `maxLength` win.
+- Inherited decimal facets are combined using the strictest constraint: the lowest `fractionDigits`, the lowest `maxInclusive`, and the highest `minExclusive` win.
+- Decimal bounds are compared as normalized decimal strings rather than floats, so no `ext-bcmath` dependency is required.
 - `ValueableInterface` + `ValueableTrait` provide `getValue()`/`setValue()` for simple content.

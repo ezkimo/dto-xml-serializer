@@ -13,8 +13,8 @@ MMNewmedia/dto-xml-serializer is a PHP 8.4+ library for DTO <-> XML and DTO <-> 
 
 ## Project Structure
 
-- `src/Xsd/` - PHP attribute classes that mirror XSD constructs (Element, ComplexType, SimpleContent, Extension, SimpleType, Restriction, Pattern, MinLength, MaxLength, Enumeration, Attribute, Sequence, Schema, RootElement, etc.)
-- `src/Serializer/` - JsonDtoSerializer, XmlDtoSerializer (Laminas Serializer adapters), and validation traits (EnumerationValidator, PatternValidator, StringLengthValidator)
+- `src/Xsd/` - PHP attribute classes that mirror XSD constructs (Element, ComplexType, SimpleContent, Extension, SimpleType, Restriction, Pattern, MinLength, MaxLength, FractionDigits, MaxInclusive, MinExclusive, Enumeration, Attribute, Sequence, Schema, RootElement, etc.)
+- `src/Serializer/` - JsonDtoSerializer, XmlDtoSerializer (Laminas Serializer adapters), and validation traits (EnumerationValidator, PatternValidator, StringLengthValidator, DecimalValidator)
 - `src/Data/` - SequenceHeap for XSD sequence ordering
 - `src/Model/` - ValueableInterface / ValueableTrait for simple content types
 
@@ -28,6 +28,8 @@ MMNewmedia/dto-xml-serializer is a PHP 8.4+ library for DTO <-> XML and DTO <-> 
 - Enumerations are validated via `EnumerationValidator` trait walking inheritance tree
 - Patterns are validated via `PatternValidator` trait walking inheritance tree (separate from enumeration validation)
 - String lengths are validated via `StringLengthValidator` trait walking inheritance tree; inherited bounds are intersected (strictest wins)
+- Decimal facets are validated via `DecimalValidator` trait walking inheritance tree; inherited facets are intersected (lowest `fractionDigits`, lowest `maxInclusive`, highest `minExclusive` win)
+- Decimal comparison uses normalized decimal strings, not floats; no `ext-bcmath` dependency
 - Simple content types implement `ValueableInterface` via `ValueableTrait`
 - Namespace handling: set namespace enum via `setNamespaces()`, use property-level namespaces with `setUsePropertyNamespaces(true)`
 - Sequence ordering is managed via `#[Sequence(position: ...)]` and `SequenceHeap`
@@ -82,3 +84,6 @@ The release workflow checks out the repository and passes `--repo "${{ github.re
 - Added `#[MinLength]` and `#[MaxLength]` attributes for `xsd:string` simple type restrictions (issue #17)
 - Added `StringLengthValidator` trait; length is measured in UTF-8 characters via `mb_strlen`, inherited bounds use the strictest constraint
 - Length validation enforced by both serializers, throwing `RuntimeException` on violation
+- Added `#[FractionDigits]`, `#[MaxInclusive]`, and `#[MinExclusive]` attributes for `xsd:decimal` simple type restrictions (issue #19)
+- Added `DecimalValidator` trait; values are compared as exact normalized decimal strings, inherited facets use the strictest constraint, and non-decimal values throw a `RuntimeException`
+- Decimal validation enforced by both serializers during serialization and by `JsonDtoSerializer` during deserialization
