@@ -36,5 +36,8 @@ final readonly class TestDecimalType
         #[Xsd\Element(namespace: Namespaces::CBC, name: 'MinInclusive', type: MinInclusiveType::class)]
         #[Xsd\Sequence(position: 7)]
         public ?MinInclusiveType $minInclusive = null,
+        #[Xsd\Element(namespace: Namespaces::CBC, name: 'TotalDigits', type: TotalDigitsType::class)]
+        #[Xsd\Sequence(position: 8)]
+        public ?TotalDigitsType $totalDigits = null,
     ) {}
 }

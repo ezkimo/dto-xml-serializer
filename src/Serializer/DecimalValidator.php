@@ -9,11 +9,12 @@ use MMNewmedia\Xsd\FractionDigits;
 use MMNewmedia\Xsd\MaxInclusive;
 use MMNewmedia\Xsd\MinExclusive;
 use MMNewmedia\Xsd\MinInclusive;
+use MMNewmedia\Xsd\TotalDigits;
 use ReflectionClass;
 use RuntimeException;
 
 /**
- * Ermittelt Xsd\FractionDigits/Xsd\MaxInclusive/Xsd\MinExclusive/Xsd\MinInclusive Deklarationen und prüft
+ * Ermittelt Xsd\FractionDigits/Xsd\MaxInclusive/Xsd\MinExclusive/Xsd\MinInclusive/Xsd\TotalDigits Deklarationen und prüft
  * Werte gegen die deklarierten Dezimalbeschränkungen.
  *
  * Die Traits werden von den Serializern verwendet, um simple Content Werte vor dem
@@ -28,12 +29,13 @@ trait DecimalValidator
      * Liefert die striktesten Dezimalbeschränkungen im Vererbungsbaum der übergebenen Klasse.
      *
      * Mehrere Restriction-Stufen werden wie in XSD als Schnittmenge behandelt:
-     * die kleinste fractionDigits, die kleinste maxInclusive, die größte minExclusive
-     * und die größte minInclusive gewinnen.
+     * die kleinste fractionDigits, die kleinste maxInclusive, die größte minExclusive,
+     * die größte minInclusive und die kleinste totalDigits gewinnen.
      *
      * @param class-string $className
      * @return array{
      *     fractionDigits: null|int,
+     *     totalDigits: null|int,
      *     maxInclusive: null|DecimalBound,
      *     minExclusive: null|DecimalBound,
      *     minInclusive: null|DecimalBound,
@@ -42,6 +44,7 @@ trait DecimalValidator
     protected function getDecimalFacets(string $className): array
     {
         $fractionDigits = null;
+        $totalDigits = null;
         $maxInclusive = null;
         $minExclusive = null;
         $minInclusive = null;
@@ -113,10 +116,17 @@ trait DecimalValidator
                     ];
                 }
             }
+
+            $attribute = $reflector->getAttributes(TotalDigits::class)[0] ?? null;
+            if ($attribute !== null) {
+                $value = $attribute->newInstance()->value;
+                $totalDigits = $totalDigits === null ? $value : min($totalDigits, $value);
+            }
         } while ($reflector = $reflector->getParentClass());
 
         return [
             'fractionDigits' => $fractionDigits,
+            'totalDigits' => $totalDigits,
             'maxInclusive' => $maxInclusive,
             'minExclusive' => $minExclusive,
             'minInclusive' => $minInclusive,
@@ -144,6 +154,7 @@ trait DecimalValidator
 
         if (
             $facets['fractionDigits'] === null
+            && $facets['totalDigits'] === null
             && $facets['maxInclusive'] === null
             && $facets['minExclusive'] === null
             && $facets['minInclusive'] === null
@@ -170,6 +181,21 @@ trait DecimalValidator
                     'Value %s has more than %d fraction digits (%d).',
                     $this->quoteDecimalValue($value),
                     $fractionDigits,
+                    $actual
+                ));
+            }
+        }
+
+        $totalDigits = $facets['totalDigits'];
+
+        if ($totalDigits !== null) {
+            $actual = strlen($decimal['digits']);
+
+            if ($actual > $totalDigits) {
+                throw new RuntimeException(sprintf(
+                    'Value %s has more than %d total digits (%d).',
+                    $this->quoteDecimalValue($value),
+                    $totalDigits,
                     $actual
                 ));
             }
