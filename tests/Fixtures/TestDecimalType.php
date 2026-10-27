@@ -33,5 +33,8 @@ final readonly class TestDecimalType
         #[Xsd\Element(namespace: Namespaces::CBC, name: 'PreciseMaxInclusive', type: PreciseMaxInclusiveType::class)]
         #[Xsd\Sequence(position: 6)]
         public PreciseMaxInclusiveType $preciseMaxInclusive,
+        #[Xsd\Element(namespace: Namespaces::CBC, name: 'MinInclusive', type: MinInclusiveType::class)]
+        #[Xsd\Sequence(position: 7)]
+        public ?MinInclusiveType $minInclusive = null,
     ) {}
 }
