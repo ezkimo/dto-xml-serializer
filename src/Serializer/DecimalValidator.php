@@ -8,11 +8,12 @@ use BackedEnum;
 use MMNewmedia\Xsd\FractionDigits;
 use MMNewmedia\Xsd\MaxInclusive;
 use MMNewmedia\Xsd\MinExclusive;
+use MMNewmedia\Xsd\MinInclusive;
 use ReflectionClass;
 use RuntimeException;
 
 /**
- * Ermittelt Xsd\FractionDigits/Xsd\MaxInclusive/Xsd\MinExclusive Deklarationen und prüft
+ * Ermittelt Xsd\FractionDigits/Xsd\MaxInclusive/Xsd\MinExclusive/Xsd\MinInclusive Deklarationen und prüft
  * Werte gegen die deklarierten Dezimalbeschränkungen.
  *
  * Die Traits werden von den Serializern verwendet, um simple Content Werte vor dem
@@ -27,13 +28,15 @@ trait DecimalValidator
      * Liefert die striktesten Dezimalbeschränkungen im Vererbungsbaum der übergebenen Klasse.
      *
      * Mehrere Restriction-Stufen werden wie in XSD als Schnittmenge behandelt:
-     * die kleinste fractionDigits, die kleinste maxInclusive und die größte minExclusive gewinnen.
+     * die kleinste fractionDigits, die kleinste maxInclusive, die größte minExclusive
+     * und die größte minInclusive gewinnen.
      *
      * @param class-string $className
      * @return array{
      *     fractionDigits: null|int,
      *     maxInclusive: null|DecimalBound,
      *     minExclusive: null|DecimalBound,
+     *     minInclusive: null|DecimalBound,
      * }
      */
     protected function getDecimalFacets(string $className): array
@@ -41,6 +44,7 @@ trait DecimalValidator
         $fractionDigits = null;
         $maxInclusive = null;
         $minExclusive = null;
+        $minInclusive = null;
         $reflector = new ReflectionClass($className);
 
         do {
@@ -89,12 +93,33 @@ trait DecimalValidator
                     ];
                 }
             }
+
+            $attribute = $reflector->getAttributes(MinInclusive::class)[0] ?? null;
+            if ($attribute !== null) {
+                $value = $attribute->newInstance()->value;
+                $decimal = $this->normalizeDecimal($value);
+
+                if ($decimal === null) {
+                    throw new RuntimeException(sprintf(
+                        'Invalid decimal value %s for minInclusive.',
+                        $this->quoteDecimalValue($value)
+                    ));
+                }
+
+                if ($minInclusive === null || $this->compareDecimals($decimal, $minInclusive['decimal']) > 0) {
+                    $minInclusive = [
+                        'literal' => $this->formatDecimalLiteral($value),
+                        'decimal' => $decimal,
+                    ];
+                }
+            }
         } while ($reflector = $reflector->getParentClass());
 
         return [
             'fractionDigits' => $fractionDigits,
             'maxInclusive' => $maxInclusive,
             'minExclusive' => $minExclusive,
+            'minInclusive' => $minInclusive,
         ];
     }
 
@@ -121,6 +146,7 @@ trait DecimalValidator
             $facets['fractionDigits'] === null
             && $facets['maxInclusive'] === null
             && $facets['minExclusive'] === null
+            && $facets['minInclusive'] === null
         ) {
             return;
         }
@@ -166,6 +192,16 @@ trait DecimalValidator
                 'Value %s is not greater than minExclusive %s.',
                 $this->quoteDecimalValue($value),
                 $minExclusive['literal']
+            ));
+        }
+
+        $minInclusive = $facets['minInclusive'];
+
+        if ($minInclusive !== null && $this->compareDecimals($decimal, $minInclusive['decimal']) < 0) {
+            throw new RuntimeException(sprintf(
+                'Value %s is less than minInclusive %s.',
+                $this->quoteDecimalValue($value),
+                $minInclusive['literal']
             ));
         }
     }

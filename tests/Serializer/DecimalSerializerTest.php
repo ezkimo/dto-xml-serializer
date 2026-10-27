@@ -11,6 +11,7 @@ use MMNewmedia\Tests\Fixtures\FractionDigitsType;
 use MMNewmedia\Tests\Fixtures\InheritedDecimalType;
 use MMNewmedia\Tests\Fixtures\MaxInclusiveType;
 use MMNewmedia\Tests\Fixtures\MinExclusiveType;
+use MMNewmedia\Tests\Fixtures\MinInclusiveType;
 use MMNewmedia\Tests\Fixtures\Namespaces;
 use MMNewmedia\Tests\Fixtures\PreciseMaxInclusiveType;
 use MMNewmedia\Tests\Fixtures\TestDecimalType;
@@ -63,6 +64,28 @@ final class DecimalSerializerTest extends TestCase
         $xml = $this->xmlSerializer->serialize(self::dto(minExclusive: '0.0001'));
 
         self::assertStringContainsString('<inv:MinExclusive>0.0001</inv:MinExclusive>', $xml);
+    }
+
+    public function testXmlSerializeAcceptsValuesEqualToMinInclusive(): void
+    {
+        $xml = $this->xmlSerializer->serialize(self::dto(minInclusive: '0'));
+
+        self::assertStringContainsString('<inv:MinInclusive>0</inv:MinInclusive>', $xml);
+    }
+
+    public function testXmlSerializeAcceptsValuesAboveMinInclusive(): void
+    {
+        $xml = $this->xmlSerializer->serialize(self::dto(minInclusive: '5'));
+
+        self::assertStringContainsString('<inv:MinInclusive>5</inv:MinInclusive>', $xml);
+    }
+
+    public function testXmlSerializeRejectsValueBelowMinInclusive(): void
+    {
+        $this->assertXmlRejects(
+            "Value '-1' is less than minInclusive 0.",
+            self::dto(minInclusive: '-1')
+        );
     }
 
     public function testXmlSerializeAcceptsLexicalDecimalWithoutLeadingZero(): void
@@ -228,6 +251,21 @@ final class DecimalSerializerTest extends TestCase
         );
     }
 
+    public function testJsonSerializeAcceptsValuesEqualToMinInclusive(): void
+    {
+        $data = json_decode($this->jsonSerializer->serialize(self::dto(minInclusive: '0')), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame('0', $data['TestDecimal']['MinInclusive']);
+    }
+
+    public function testJsonSerializeRejectsValueBelowMinInclusive(): void
+    {
+        $this->assertJsonSerializeRejects(
+            "Value '-1' is less than minInclusive 0.",
+            self::dto(minInclusive: '-1')
+        );
+    }
+
     public function testJsonSerializeRejectsNonDecimalValue(): void
     {
         $this->assertJsonSerializeRejects(
@@ -348,6 +386,7 @@ final class DecimalSerializerTest extends TestCase
         string|int|float $inheritedDecimal = '49.99',
         string|int|float $combined = '999.99',
         string|int|float $preciseMaxInclusive = '9007199254740993',
+        string|int|float|null $minInclusive = null,
     ): TestDecimalType {
         $fractionDigitsType = new FractionDigitsType();
         $fractionDigitsType->setValue($fractionDigits);
@@ -367,6 +406,12 @@ final class DecimalSerializerTest extends TestCase
         $preciseMaxInclusiveType = new PreciseMaxInclusiveType();
         $preciseMaxInclusiveType->setValue($preciseMaxInclusive);
 
+        $minInclusiveType = null;
+        if ($minInclusive !== null) {
+            $minInclusiveType = new MinInclusiveType();
+            $minInclusiveType->setValue($minInclusive);
+        }
+
         return new TestDecimalType(
             $fractionDigitsType,
             $maxInclusiveType,
@@ -374,6 +419,7 @@ final class DecimalSerializerTest extends TestCase
             $inheritedDecimalType,
             $combinedType,
             $preciseMaxInclusiveType,
+            $minInclusiveType,
         );
     }
 
