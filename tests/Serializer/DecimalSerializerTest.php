@@ -12,6 +12,7 @@ use MMNewmedia\Tests\Fixtures\InheritedDecimalType;
 use MMNewmedia\Tests\Fixtures\MaxInclusiveType;
 use MMNewmedia\Tests\Fixtures\MinExclusiveType;
 use MMNewmedia\Tests\Fixtures\MinInclusiveType;
+use MMNewmedia\Tests\Fixtures\TotalDigitsType;
 use MMNewmedia\Tests\Fixtures\Namespaces;
 use MMNewmedia\Tests\Fixtures\PreciseMaxInclusiveType;
 use MMNewmedia\Tests\Fixtures\TestDecimalType;
@@ -387,6 +388,7 @@ final class DecimalSerializerTest extends TestCase
         string|int|float $combined = '999.99',
         string|int|float $preciseMaxInclusive = '9007199254740993',
         string|int|float|null $minInclusive = null,
+        string|int|float|null $totalDigits = null,
     ): TestDecimalType {
         $fractionDigitsType = new FractionDigitsType();
         $fractionDigitsType->setValue($fractionDigits);
@@ -412,6 +414,12 @@ final class DecimalSerializerTest extends TestCase
             $minInclusiveType->setValue($minInclusive);
         }
 
+        $totalDigitsType = null;
+        if ($totalDigits !== null) {
+            $totalDigitsType = new TotalDigitsType();
+            $totalDigitsType->setValue($totalDigits);
+        }
+
         return new TestDecimalType(
             $fractionDigitsType,
             $maxInclusiveType,
@@ -420,6 +428,7 @@ final class DecimalSerializerTest extends TestCase
             $combinedType,
             $preciseMaxInclusiveType,
             $minInclusiveType,
+            $totalDigitsType,
         );
     }
 
