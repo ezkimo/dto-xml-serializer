@@ -10,18 +10,23 @@ $serializer = new XmlDtoSerializer();
 
 ## Namespaces
 
-Map namespace URIs to prefixes using a BackedEnum. The case name maps to the prefix after the last underscore.
+Configure namespace URIs and their XML prefixes explicitly. Only namespaces actually used by the
+document are declared, once, on the root element.
 
 ```php
-enum HeaderNamespaces: string
-{
-    case INV = 'urn:example:invoice';
-    case CBC = 'urn:example:commonbasic';
-    case CAC = 'urn:example:commonaggregate';
-}
-
-$serializer->setNamespaces(HeaderNamespaces::class);
+$serializer->setNamespacePrefixes([
+    'urn:example:invoice' => 'inv',
+    'urn:example:commonbasic' => 'cbc',
+    'urn:example:commonaggregate' => 'cac',
+]);
 ```
+
+Prefixes are validated eagerly; invalid, reserved (`xml`, `xmlns`), or duplicate prefixes throw
+an `InvalidArgumentException`. See [Namespaces](../namespaces.md) for details.
+
+For backwards compatibility, a namespace `BackedEnum` can still be configured with
+`setNamespaces()`; prefixes are then derived from the case names (lowercased). The explicit map
+takes precedence per URI. `setNamespaces()` is the legacy fallback.
 
 ## Property vs Schema Namespaces
 
@@ -38,7 +43,8 @@ $serializer->setUsePropertyNamespaces(true);
 $xml = $serializer->serialize($invoice);
 ```
 
-The root element is determined from `#[RootElement]` on the class. Namespaces are declared on the root element based on the namespace mapping.
+The root element is determined from `#[RootElement]` on the class. Only namespaces actually used
+by the document are declared on the root element, based on the configured mapping.
 
 ## Simple Content with Attributes
 

@@ -8,7 +8,9 @@ use BackedEnum;
 use DateTimeInterface;
 use DOMDocument;
 use DOMElement;
+use InvalidArgumentException;
 use Laminas\Serializer\Adapter\AdapterInterface;
+use LogicException;
 use MMNewmedia\Data\SequenceHeap;
 use MMNewmedia\Model\ValueableInterface;
 use MMNewmedia\Xsd\Attribute;
@@ -34,16 +36,25 @@ class XmlDtoSerializer implements AdapterInterface
     use StringLengthValidator;
 
     /**
-     * Mappgin von Namespace URI zu Namespace Prefixes
-     * @var array
+     * Zwischengespeicherte Zuordnung von Namespace URI zu Namespace Prefix.
+     *
+     * @var array<string, string>
      */
     protected array $namespaceMapping = [];
 
     /**
-     * fqcn der zu Namespace Enumeration
-     * @var string
+     * Explizite Zuordnung von Namespace URI zu Namespace Prefix. Hat Vorrang vor
+     * den aus der Namespace Enumeration abgeleiteten Prefixen.
+     *
+     * @var array<string, string>
      */
-    protected string $namespaces;
+    protected array $namespacePrefixes = [];
+
+    /**
+     * fqcn der zu Namespace Enumeration
+     * @var null|string
+     */
+    protected ?string $namespaces = null;
 
     /**
      * Ob für Kindelemente die im Element-Attribut deklarierten Namespaces den Vorrang vor der
@@ -87,22 +98,26 @@ class XmlDtoSerializer implements AdapterInterface
             throw new RuntimeException('Missing #[RootElement] attribute');
         }
 
+        /** @var \ReflectionAttribute<\MMNewmedia\Xsd\RootElement> $rootAttribute */
+        $rootName = $rootAttribute->newInstance()->name ?? $reflector->getShortName();
+        $rootNamespace = $this->getElementNamespace($reflector, $rootAttribute);
+
+        // Alle tatsächlich verwendeten Namespaces sammeln, bevor das DOM aufgebaut
+        // wird. Nur diese werden später auf dem Wurzelelement deklariert.
+        $usedNamespaces = $this->collectUsedNamespaces($dto);
+        if ($rootNamespace !== null && $rootNamespace !== '') {
+            $usedNamespaces[$rootNamespace] = $rootName;
+        }
+
         $dom = new DOMDocument('1.0', 'UTF-8');
         $dom->formatOutput = true;
-        
-        /** @var \ReflectionAttribute<\MMNewmedia\Xsd\RootElement> $rootAttribute */ 
-        $rootName = $rootAttribute->newInstance()->name;
-        $rootNamespace = $this->getElementNamespace($reflector, $rootAttribute);
 
         $qualifiedRootName = $this->getElementQualifiedName($rootName, $rootNamespace);
         $rootNode = $dom->createElementNs($rootNamespace, $qualifiedRootName);
-        
-        $namespaces = $this->getNamespaceMapping();
-        foreach ($namespaces as $namespace => $prefix) {
-            $rootNode->setAttributeNS('http://www.w3.org/2000/xmlns/', 'xmlns:' . strtolower($prefix), $namespace);
-        }
-
         $dom->appendChild($rootNode);
+
+        $this->declareNamespaces($rootNode, $usedNamespaces);
+
         $this->serializeObject($dto, $rootNode, $dom);
 
         return $dom->saveXML();
@@ -227,15 +242,176 @@ class XmlDtoSerializer implements AdapterInterface
 
     /**
      * Liefert den voll qualifizierten Namen des XML Knotens
-     * 
+     *
      * @param string $elementName
-     * @param string $elementNamespace
+     * @param null|string $elementNamespace
      * @return string
      */
-    protected function getElementQualifiedName(string $elementName, string $elementNamespace): string
+    protected function getElementQualifiedName(string $elementName, ?string $elementNamespace): string
     {
-        $cases = $this->getNamespaceMapping();
-        return strtolower($cases[$elementNamespace]) . ':' . $elementName;
+        if ($elementNamespace === null || $elementNamespace === '') {
+            throw new LogicException(sprintf(
+                'No XML namespace configured for element "%s". Configure a namespace and a prefix with %s::setNamespacePrefixes() or setNamespaces().',
+                $elementName,
+                self::class,
+            ));
+        }
+
+        return $this->resolvePrefix($elementNamespace, $elementName) . ':' . $elementName;
+    }
+
+    /**
+     * Liefert den XML Namespace Prefix für die übergebene Namespace URI.
+     *
+     * Explizit über setNamespacePrefixes() konfigurierte Prefixe werden unverändert
+     * (inklusive Groß-/Kleinschreibung) übernommen. Fehlt ein expliziter Eintrag,
+     * wird auf den aus der Namespace Enumeration abgeleiteten Prefix zurückgegriffen;
+     * dieser wird - wie bisher - kleingeschrieben.
+     *
+     * @param string $namespace Die Namespace URI
+     * @param null|string $elementName Der Name des betroffenen Elements für Fehlermeldungen
+     * @return string
+     *
+     * @throws LogicException Wenn für die URI kein Prefix konfiguriert oder der
+     *                        abgeleitete Prefix ungültig ist.
+     */
+    protected function resolvePrefix(string $namespace, ?string $elementName = null): string
+    {
+        if (array_key_exists($namespace, $this->namespacePrefixes) === true) {
+            return $this->namespacePrefixes[$namespace];
+        }
+
+        $mapping = $this->getNamespaceMapping();
+        if (array_key_exists($namespace, $mapping) === false) {
+            throw new LogicException(sprintf(
+                'No XML prefix configured for namespace "%s"%s. Configure it with %s::setNamespacePrefixes() or setNamespaces().',
+                $namespace,
+                $elementName !== null ? sprintf(' (element "%s")', $elementName) : '',
+                self::class,
+            ));
+        }
+
+        $prefix = strtolower($mapping[$namespace]);
+        if ($this->isValidPrefix($prefix) === false) {
+            throw new LogicException(sprintf(
+                'Invalid XML namespace prefix "%s" derived for namespace "%s"%s. Configure a valid prefix with %s::setNamespacePrefixes().',
+                $prefix,
+                $namespace,
+                $elementName !== null ? sprintf(' (element "%s")', $elementName) : '',
+                self::class,
+            ));
+        }
+
+        return $prefix;
+    }
+
+    /**
+     * Prüft, ob der übergebene Wert ein gültiger, nicht reservierter XML Prefix ist.
+     *
+     * @param string $prefix
+     * @return bool
+     */
+    protected function isValidPrefix(string $prefix): bool
+    {
+        if (preg_match('/^[\p{L}_][\p{L}\p{N}._\-\x{B7}\p{M}]*$/u', $prefix) !== 1) {
+            return false;
+        }
+
+        return in_array(strtolower($prefix), ['xml', 'xmlns'], true) === false;
+    }
+
+    /**
+     * Sammelt alle Namespace URIs, die im zu serialisierenden Dokument tatsächlich
+     * verwendet werden, zusammen mit dem ersten Elementnamen je URI.
+     *
+     * @param object $dto Das zu serialisierende DTO
+     * @return array<string, string> Namespace URI zu Elementname
+     */
+    protected function collectUsedNamespaces(object $dto): array
+    {
+        $used = [];
+        $this->collectObjectNamespaces($dto, $used);
+
+        return $used;
+    }
+
+    /**
+     * Durchläuft das DTO rekursiv mit denselben Regeln wie serializeObject() und
+     * sammelt die dabei verwendeten Namespaces.
+     *
+     * @param object $dto
+     * @param array<string, string> $used
+     * @return void
+     */
+    protected function collectObjectNamespaces(object $dto, array &$used): void
+    {
+        $reflector = new ReflectionClass($dto);
+        $schema = $reflector->getAttributes(Schema::class)[0] ?? false;
+
+        $sequence = $this->generateSequenceHeap($reflector->getProperties());
+
+        foreach ($sequence as $property) {
+            $value = $property->getValue($dto);
+            if ($value === null || ($value instanceof SplObjectStorage && $value->count() === 0)) {
+                continue;
+            }
+
+            $elementAttribute = $property->getAttributes(Element::class)[0] ?? false;
+            if ($elementAttribute === false) {
+                continue;
+            }
+
+            $nodeName = $this->getElementName($property, $elementAttribute);
+            $nodeNamespace = $this->resolveElementNamespace($property, $elementAttribute, $schema);
+
+            if ($nodeNamespace !== null && $nodeNamespace !== '' && array_key_exists($nodeNamespace, $used) === false) {
+                $used[$nodeNamespace] = $nodeName;
+            }
+
+            if (is_object($value) && $this->isComplexType($value::class)) {
+                $this->collectObjectNamespaces($value, $used);
+            } elseif ($value instanceof SplObjectStorage && $elementAttribute->newInstance()->maxOccurs > 1) {
+                foreach ($value as $instance) {
+                    if (is_object($instance) && $this->isComplexType($instance::class)) {
+                        $this->collectObjectNamespaces($instance, $used);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Deklariert die verwendeten Namespaces genau einmal auf dem Wurzelelement.
+     *
+     * @param DOMElement $root
+     * @param array<string, string> $usedNamespaces Namespace URI zu Elementname
+     * @return void
+     *
+     * @throws LogicException Wenn zwei verwendete Namespaces auf denselben Prefix abbilden.
+     */
+    protected function declareNamespaces(DOMElement $root, array $usedNamespaces): void
+    {
+        $prefixToNamespace = [];
+
+        foreach ($usedNamespaces as $namespace => $elementName) {
+            $prefix = $this->resolvePrefix($namespace, $elementName);
+
+            if (isset($prefixToNamespace[$prefix]) && $prefixToNamespace[$prefix] !== $namespace) {
+                throw new LogicException(sprintf(
+                    'Duplicate XML namespace prefix "%s" for namespaces "%s" and "%s". Configure unique prefixes with %s::setNamespacePrefixes().',
+                    $prefix,
+                    $prefixToNamespace[$prefix],
+                    $namespace,
+                    self::class,
+                ));
+            }
+
+            $prefixToNamespace[$prefix] = $namespace;
+        }
+
+        foreach ($prefixToNamespace as $prefix => $namespace) {
+            $root->setAttributeNS('http://www.w3.org/2000/xmlns/', 'xmlns:' . $prefix, $namespace);
+        }
     }
 
     /**
@@ -286,28 +462,47 @@ class XmlDtoSerializer implements AdapterInterface
     }
 
     /**
-     * Liefert das Namespace Mapping Array
-     * Sofern die benutzten Namespaces noch nicht initialisiert sind, werden diese hier in ein Array geparst, 
-     * dessen Keys die Namespace URI und dessen Werte die zu verwendenden Prefixes darstellen.
-     * 
-     * @return array
+     * Liefert das effektive Namespace Mapping Array.
+     *
+     * Sofern explizit Prefixe über setNamespacePrefixes() konfiguriert wurden,
+     * haben diese Vorrang vor den aus der Namespace Enumeration abgeleiteten
+     * Prefixen. Für URIs ohne expliziten Eintrag wird auf die Enumeration
+     * zurückgegriffen.
+     *
+     * @return array<string, string>
      */
     public function getNamespaceMapping(): array
     {
-        if (! is_string($this->namespaces)) {
+        if ($this->namespaceMapping !== []) {
+            return $this->namespaceMapping;
+        }
+
+        $mapping = $this->getEnumNamespaceMapping();
+
+        if ($this->namespacePrefixes !== []) {
+            $mapping = array_merge($mapping, $this->namespacePrefixes);
+        }
+
+        return $this->namespaceMapping = $mapping;
+    }
+
+    /**
+     * Liefert die aus der Namespace Enumeration abgeleiteten Prefixe.
+     *
+     * @return array<string, string>
+     */
+    private function getEnumNamespaceMapping(): array
+    {
+        if ($this->namespaces === null) {
             return [];
         }
 
-        if (empty($this->namespaceMapping) === true) {
-            $this->namespaceMapping = array_map(
-                fn(string $value): string => ($pos = strrpos($value, '_')) !== false
-                    ? substr($value, $pos + 1)
-                    : $value, 
-                array_column($this->namespaces::cases(), 'name', 'value')
-            );
-        }
-
-        return $this->namespaceMapping;
+        return array_map(
+            fn(string $value): string => ($pos = strrpos($value, '_')) !== false
+                ? substr($value, $pos + 1)
+                : $value,
+            array_column($this->namespaces::cases(), 'name', 'value')
+        );
     }
 
     /**
@@ -516,6 +711,72 @@ class XmlDtoSerializer implements AdapterInterface
     public function setNamespaces(string $namespaces): void
     {
         $this->namespaces = $namespaces;
+        $this->namespaceMapping = [];
+    }
+
+    /**
+     * Setzt eine explizite Zuordnung von Namespace URI zu XML Prefix.
+     *
+     * Die Einträge werden bei der Konfiguration validiert und haben Vorrang vor
+     * Prefixen, die aus der Namespace Enumeration abgeleitet werden. Die Prefixe
+     * werden unverändert (inklusive Groß-/Kleinschreibung) verwendet.
+     *
+     * @param array<array-key, mixed> $uriToPrefix Namespace URI zu XML Prefix
+     * @return void
+     *
+     * @throws InvalidArgumentException Bei ungültigen, leeren, reservierten oder doppelten Prefixen.
+     */
+    public function setNamespacePrefixes(array $uriToPrefix): void
+    {
+        $prefixToUri = [];
+
+        foreach ($uriToPrefix as $uri => $prefix) {
+            if (is_string($uri) === false || $uri === '') {
+                throw new InvalidArgumentException(sprintf(
+                    'Namespace URI keys must be non-empty strings, got "%s".',
+                    strval($uri),
+                ));
+            }
+
+            if (is_string($prefix) === false || $prefix === '') {
+                throw new InvalidArgumentException(sprintf(
+                    'Namespace prefix for namespace "%s" must be a non-empty string.',
+                    $uri,
+                ));
+            }
+
+            if ($this->isValidPrefix($prefix) === false) {
+                throw new InvalidArgumentException(sprintf(
+                    'Invalid XML namespace prefix "%s" for namespace "%s".',
+                    $prefix,
+                    $uri,
+                ));
+            }
+
+            if (isset($prefixToUri[$prefix]) && $prefixToUri[$prefix] !== $uri) {
+                throw new InvalidArgumentException(sprintf(
+                    'Duplicate XML namespace prefix "%s" for namespaces "%s" and "%s".',
+                    $prefix,
+                    $prefixToUri[$prefix],
+                    $uri,
+                ));
+            }
+
+            $prefixToUri[$prefix] = $uri;
+        }
+
+        $this->namespacePrefixes = $uriToPrefix;
+        $this->namespaceMapping = [];
+    }
+
+    /**
+     * Liefert die explizit konfigurierte Zuordnung von Namespace URI zu XML Prefix.
+     *
+     * @return array<string, string>
+     */
+    public function getNamespacePrefixes(): array
+    {
+        return $this->namespacePrefixes;
     }
 
     /**

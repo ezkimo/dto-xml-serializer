@@ -28,10 +28,21 @@ final class XmlDtoSerializerTest extends TestCase
         self::assertStringStartsWith('<?xml version="1.0" encoding="UTF-8"?>', $xml);
         self::assertStringContainsString('<inv:TestInvoice', $xml);
         self::assertStringContainsString('xmlns:inv="urn:example:invoice"', $xml);
-        self::assertStringContainsString('xmlns:cbc="urn:example:commonbasic"', $xml);
         self::assertStringContainsString('xmlns:cac="urn:example:commonaggregate"', $xml);
-        self::assertStringContainsString('xmlns:udt="urn:example:unqualifieddata"', $xml);
-        self::assertStringContainsString('xmlns:ext="urn:example:extension"', $xml);
+
+        // Only namespaces actually used by the document are declared.
+        self::assertStringNotContainsString('xmlns:cbc=', $xml);
+        self::assertStringNotContainsString('xmlns:udt=', $xml);
+        self::assertStringNotContainsString('xmlns:ext=', $xml);
+    }
+
+    public function testSerializeDeclaresPropertyNamespacesWhenEnabled(): void
+    {
+        $this->serializer->setUsePropertyNamespaces(true);
+        $xml = $this->serializer->serialize(JsonDtoSerializerTest::invoice());
+
+        self::assertStringContainsString('xmlns:cbc="urn:example:commonbasic"', $xml);
+        self::assertStringContainsString('<cbc:ID>RE-42</cbc:ID>', $xml);
     }
 
     public function testSerializeChildrenInheritEnclosingTypesTargetNamespace(): void

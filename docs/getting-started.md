@@ -68,7 +68,10 @@ final class CurrencyCodeType implements ValueableInterface
 use MMNewmedia\Serializer\XmlDtoSerializer;
 
 $serializer = new XmlDtoSerializer();
-$serializer->setNamespaces(HeaderNamespaces::class);
+$serializer->setNamespacePrefixes([
+    'urn:example:invoice' => 'inv',
+    'urn:example:commonbasic' => 'cbc',
+]);
 // For UBL-style models, prefer property namespaces
 $serializer->setUsePropertyNamespaces(true);
 
