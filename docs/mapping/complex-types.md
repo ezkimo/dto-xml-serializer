@@ -99,6 +99,52 @@ public SplObjectStorage $note,
 
 Targets: `TARGET_PROPERTY`
 
+## Choice
+
+Use `#[Choice]` on every alternative property of an `xs:choice` group. Properties sharing the same `group` are mutually exclusive: by default (`minOccurs: 1`, `maxOccurs: 1`) exactly one must be set. With `minOccurs: 0`, no alternative has to be set.
+
+**XSD:**
+```xml
+<xs:complexType name="PaymentType">
+  <xs:choice>
+    <xs:element name="BankCard" type="xs:string"/>
+    <xs:element name="DirectDebit" type="xs:string"/>
+  </xs:choice>
+</xs:complexType>
+```
+
+**PHP:**
+```php
+use MMNewmedia\Xsd;
+
+#[Xsd\ComplexType(name: 'PaymentType')]
+final readonly class PaymentType
+{
+    public function __construct(
+        #[Xsd\Element(name: 'BankCard', type: 'xsd:string')]
+        #[Xsd\Choice(group: 'payment')]
+        public ?string $bankCard = null,
+
+        #[Xsd\Element(name: 'DirectDebit', type: 'xsd:string')]
+        #[Xsd\Choice(group: 'payment')]
+        public ?string $directDebit = null,
+    ) {}
+}
+```
+
+### `#[Choice]` Properties
+
+| Property | XSD | Description |
+| --- | --- | --- |
+| `group` | - | Identifier of the mutually exclusive group |
+| `id` | `@id` | Unique ID |
+| `maxOccurs` | `@maxOccurs` | Maximum number of selected alternatives (default 1) |
+| `minOccurs` | `@minOccurs` | Minimum number of selected alternatives (default 1) |
+
+Targets: `TARGET_PROPERTY`
+
+> Both serializers validate choice groups while serializing; `JsonDtoSerializer` also validates after deserialization. Violations throw a `RuntimeException`. Nested choices and sequences inside a choice are not supported yet.
+
 ## Collections
 
 Collections of elements are represented with `SplObjectStorage`:
