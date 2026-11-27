@@ -30,6 +30,7 @@ use SplObjectStorage;
 
 class XmlDtoSerializer implements AdapterInterface
 {
+    use ChoiceValidator;
     use DecimalValidator;
     use EnumerationValidator;
     use PatternValidator;
@@ -602,6 +603,8 @@ class XmlDtoSerializer implements AdapterInterface
      */
     protected function serializeObject(object $dto, DOMElement $parent, DOMDocument $dom): void
     {
+        $this->assertChoiceGroups($dto);
+
         $reflector = new ReflectionClass($dto);
         $schema = $reflector->getAttributes(Schema::class)[0] ?? false;
 

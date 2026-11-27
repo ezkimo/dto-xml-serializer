@@ -34,6 +34,7 @@ use SplObjectStorage;
  */
 class JsonDtoSerializer implements AdapterInterface
 {
+    use ChoiceValidator;
     use DecimalValidator;
     use EnumerationValidator;
     use PatternValidator;
@@ -223,6 +224,8 @@ class JsonDtoSerializer implements AdapterInterface
      */
     protected function objectToArray(object $dto): array
     {
+        $this->assertChoiceGroups($dto);
+
         $result = [];
         $reflector = new ReflectionClass($dto);
 
@@ -456,7 +459,7 @@ class JsonDtoSerializer implements AdapterInterface
         $this->assertNoUnknownKeys($data, $knownKeys, $className);
 
         try {
-            return $reflector->newInstanceArgs($arguments);
+            $dto = $reflector->newInstanceArgs($arguments);
         } catch (ArgumentCountError $exception) {
             throw new RuntimeException(sprintf(
                 'Cannot create "%s": missing required element(s) "%s".',
@@ -464,6 +467,10 @@ class JsonDtoSerializer implements AdapterInterface
                 implode('", "', $this->getMissingRequiredArguments($reflector, $arguments))
             ), 0, $exception);
         }
+
+        $this->assertChoiceGroups($dto);
+
+        return $dto;
     }
 
     /**
